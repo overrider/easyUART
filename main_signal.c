@@ -125,47 +125,47 @@ int main(int argc, char *argv[]) {
 	last_pok = time(NULL);
 
     while (do_exit == 0) {
+		// Create a timeout for 1 second
 		struct timespec timeout;
 		timeout.tv_sec = 1;
-		timeout.tv_nsec = 0; // 10 000 000 nanoseconds = 10milliseconds
+		timeout.tv_nsec = 0;
+		while (nanosleep(&timeout, &timeout) && errno == EINTR);
 
-		while (nanosleep(&timeout, &timeout) && errno == EINTR){
-			current_time = time(NULL);
-			time_since_last_pok = current_time - last_pok;
+		current_time = time(NULL);
+		time_since_last_pok = current_time - last_pok;
 
-			if (time_since_last_pok >= 30){
-				uart_status = 0;
+		if (time_since_last_pok >= 30){
+			uart_status = 0;
+		}
+
+		if(current_time % 10 == 0){
+			add_to_outgoing("#PNG\r");
+		}
+
+		if (count_incoming_list() > 0) {
+			char *command = get_next_incoming();
+			if (command != NULL) {
+				process_command(command);
 			}
+		}
 
-			if(current_time % 10 == 0){
-				add_to_outgoing("#PNG\r");
-			}
+		if (count_outgoing_list() > 0) {
+			char *command = get_next_outgoing(); // returns and removes item from the outgoing list
+			if (command != NULL) {
+				int sent_count = write(serial_fd, command, strlen(command));
 
-			if (count_incoming_list() > 0) {
-				char *command = get_next_incoming();
-				if (command != NULL) {
-					process_command(command);
+				if (sent_count != (strlen(command))) {
+					printf("Sorry couldn't send. Maybe device have issue\n");
 				}
 			}
+		}
 
-			if (count_outgoing_list() > 0) {
-				char *command = get_next_outgoing(); // returns and removes item from the outgoing list
-				if (command != NULL) {
-					int sent_count = write(serial_fd, command, strlen(command));
-
-					if (sent_count != (strlen(command))) {
-						printf("Sorry couldn't send. Maybe device have issue\n");
-					}
-				}
-			}
-
-			if(DEBUG){
-				printf("INCOMING: %d OUTGOING: %d UART: %d\n",
-						count_incoming_list(),
-						count_outgoing_list(),
-						uart_status
-				);
-			}
+		if(DEBUG){
+			printf("INCOMING: %d OUTGOING: %d UART: %d\n",
+					count_incoming_list(),
+					count_outgoing_list(),
+					uart_status
+			);
 		}
 	}
     uart_close();
