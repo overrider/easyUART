@@ -1,24 +1,8 @@
-/*
- * =====================================================================================
- *
- *       Filename:  list.c
- *
- *    Description:  
- *
- *        Version:  1.0
- *        Created:  01/31/2018 05:54:27 AM
- *       Revision:  none
- *       Compiler:  gcc
- *
- *         Author:  YOUR NAME (), 
- *   Organization:  
- *
- * =====================================================================================
- */
 #include "app.h"
 
-int count_incoming_list()
-{
+// Return items in incoming buffer/list that 
+// are ready for processing
+int count_incoming_list() {
     int length = 0;
     while (incoming_list[length][0] != 0) {
         length++;
@@ -26,6 +10,8 @@ int count_incoming_list()
     return length;
 }
 
+// Return items in outgoing buffer/list that
+// are ready for processing
 int count_outgoing_list() {
     int length = 0;
     while (outgoing_list[length][0] != 0) {
@@ -34,20 +20,23 @@ int count_outgoing_list() {
     return length;
 }
 
+// Configure incoming buffer/list/array used
+// to store incoming strings from UART
 void init_incoming_list() {
-    for (int i = 0; i < MAX_INCOMING_LIST_SIZE; i++)
-    {
+    for (int i = 0; i < MAX_INCOMING_LIST_SIZE; i++) {
         strcpy(incoming_list[i], "");
     }
 }
 
+// Configure outgoing buffer/list/array used
+// to store outgoing strings to be sent to UART
 void init_outgoing_list() {
     for (int i = 0; i < MAX_OUTGOING_LIST_SIZE; i++) {
         strcpy(outgoing_list[i], "");
     }
 }
 
-// adds new item to incoming list
+// Adds new item to incoming list
 int add_to_incoming(const char *word) {
     int ret = 1;
     if (word != NULL) {
@@ -57,11 +46,8 @@ int add_to_incoming(const char *word) {
             if (count_incoming_list() >= MAX_INCOMING_LIST_SIZE) {
 				printf("Too many incoming commands - skipping\n");
                 ret = 1;
-            }
-            else
-            {
-                for (int i = MAX_INCOMING_LIST_SIZE - 1; i > 0; i--)
-                {
+            } else {
+                for (int i = MAX_INCOMING_LIST_SIZE - 1; i > 0; i--) {
                     strcpy(incoming_list[i], incoming_list[i - 1]);
                 }
                 strcpy(incoming_list[0], word);
@@ -71,27 +57,18 @@ int add_to_incoming(const char *word) {
     return ret;
 }
 
-// adds new item to outcoming list
-int add_to_outgoing(const char *word)
-{
+// Adds new item to outcoming list
+int add_to_outgoing(const char *word) {
     int ret = 1;
-    if (word != NULL)
-    {
-        if (strlen(word) >= MAX_STRING_LENGTH)
-        {
+    if (word != NULL) {
+        if (strlen(word) >= MAX_STRING_LENGTH) {
             ret = 0;
-        }
-        else
-        {
-            if (count_outgoing_list() >= MAX_OUTGOING_LIST_SIZE)
-            {
+        } else {
+            if (count_outgoing_list() >= MAX_OUTGOING_LIST_SIZE) {
 				printf("Too many incoming commands - skipping\n");
                 ret = 1;
-            }
-            else
-            {
-                for (int i = MAX_OUTGOING_LIST_SIZE - 1; i > 0; i--)
-                {
+            } else {
+                for (int i = MAX_OUTGOING_LIST_SIZE - 1; i > 0; i--) {
                     strcpy(outgoing_list[i], outgoing_list[i - 1]);
                 }
                 strcpy(outgoing_list[0], word);
@@ -101,9 +78,9 @@ int add_to_outgoing(const char *word)
     return ret;
 }
 
-
-char *get_next_incoming()
-{
+// Retrieve the next item from the incoming list,
+// delete it from the list, and return it as a string
+char *get_next_incoming() {
     static char message[MAX_STRING_LENGTH];
     if (count_incoming_list() == 0) {
         return NULL;
@@ -111,9 +88,6 @@ char *get_next_incoming()
 
     memset(message, 0, sizeof(message));
 
-    // 1.) get next item from list
-    // 2.) delete item from list
-    // 3.) return item as string
     for (int i = MAX_INCOMING_LIST_SIZE - 1; i >= 0; i--) {
         if (incoming_list[i][0] != 0) {
             strcpy(message, incoming_list[i]);
@@ -124,8 +98,9 @@ char *get_next_incoming()
     return message;
 }
 
-char *get_next_outgoing()
-{
+// Retrieve the next item from the outgoing list,
+// delete it from the list, and return it as a string
+char *get_next_outgoing() {
     static char message[MAX_STRING_LENGTH];
     if (count_outgoing_list() == 0) {
         return NULL;
@@ -133,9 +108,6 @@ char *get_next_outgoing()
 
     memset(message, 0, sizeof(message));
 
-    // 1.) get next item from list
-    // 2.) delete item from list
-    // 3.) return item as string
     for (int i = MAX_OUTGOING_LIST_SIZE - 1; i >= 0; i--) {
         if (outgoing_list[i][0] != 0) {
             strcpy(message, outgoing_list[i]);

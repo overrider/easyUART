@@ -10,7 +10,7 @@ struct sigaction saio;
 
 static volatile int do_exit = 0;
 
-// input
+// Input buffer used for receiving UART characters
 char input_buffer[INPUT_BUFFER_SIZE];
 int input_buffer_index = 0;
 
@@ -18,6 +18,11 @@ int input_buffer_index = 0;
 char incoming_list[MAX_INCOMING_LIST_SIZE][MAX_STRING_LENGTH];
 char outgoing_list[MAX_OUTGOING_LIST_SIZE][MAX_STRING_LENGTH];
 
+// Variables used to determine UART status.
+// Basically, this code sends #PNG every 10 seconds
+// to the UART. It expects the UART device to reply
+// with #POK. If no #POK is received, we can assume
+// there is a communication issue with the device.
 unsigned long current_time = 0;
 unsigned long last_pok 	   = 0;
 unsigned long time_since_last_pok = 0;
@@ -28,10 +33,8 @@ int uart_status = 1;
 int uart_open() {
     int fd;
     fd = open(UART_DEVICE, O_RDWR | O_NOCTTY | O_NDELAY);
-    if (fd == -1)
-    {
-        perror("open_port: Unable to open serial port\n");
-        //fflush(NULL);
+    if (fd == -1) {
+        perror("Unable to open serial port\n");
         return -1;
     }
 
@@ -55,8 +58,9 @@ int uart_open() {
     term_attr.c_iflag &= ~(IXON | IXOFF | IXANY);
     term_attr.c_oflag &= ~OPOST;
     tcsetattr(fd, TCSANOW, &term_attr);
-    printf("UART1 (%s) configured....\n", UART_DEVICE);
-    //fflush(NULL);
+	if(DEBUG){
+		printf("UART1 (%s) configured....\n", UART_DEVICE);
+	}
     return fd;
 }
 
@@ -104,14 +108,12 @@ int main(int argc, char *argv[]) {
 
     while(is_device_ready() == 0) {
         printf("Waiting for %s to be plugged in\n", UART_DEVICE);
-        //fflush(NULL);
 
         if (do_exit != 0) {
             exit(do_exit);
         }
         sleep(1);
     }
-	printf("Waiting for %s to be plugged in....OK\n", UART_DEVICE);
 
     serial_fd = uart_open();
     if (serial_fd < 0) {
@@ -123,51 +125,49 @@ int main(int argc, char *argv[]) {
 	last_pok = time(NULL);
 
     while (do_exit == 0) {
-
 		struct timespec timeout;
 		timeout.tv_sec = 1;
 		timeout.tv_nsec = 0; // 10 000 000 nanoseconds = 10milliseconds
 
-		while (nanosleep(&timeout, &timeout) && errno == EINTR);
+		while (nanosleep(&timeout, &timeout) && errno == EINTR){
+			current_time = time(NULL);
+			time_since_last_pok = current_time - last_pok;
 
-		current_time = time(NULL);
-		time_since_last_pok = current_time - last_pok;
+			if (time_since_last_pok >= 30){
+				uart_status = 0;
+			}
 
-		if (time_since_last_pok >= 30){
-			uart_status = 0;
-		}
+			if(current_time % 10 == 0){
+				add_to_outgoing("#PNG\r");
+			}
 
-		if(current_time % 10 == 0){
-			add_to_outgoing("#PNG\r");
-		}
+			if (count_incoming_list() > 0) {
+				char *command = get_next_incoming();
+				if (command != NULL) {
+					process_command(command);
+				}
+			}
 
-        if (count_incoming_list() > 0) {
-			char *command = get_next_incoming();
-			if (command != NULL) {
-				process_command(command);
+			if (count_outgoing_list() > 0) {
+				char *command = get_next_outgoing(); // returns and removes item from the outgoing list
+				if (command != NULL) {
+					int sent_count = write(serial_fd, command, strlen(command));
+
+					if (sent_count != (strlen(command))) {
+						printf("Sorry couldn't send. Maybe device have issue\n");
+					}
+				}
+			}
+
+			if(DEBUG){
+				printf("INCOMING: %d OUTGOING: %d UART: %d\n",
+						count_incoming_list(),
+						count_outgoing_list(),
+						uart_status
+				);
 			}
 		}
-
-        if (count_outgoing_list() > 0) {
-            char *command = get_next_outgoing(); // returns and removes item from the outgoing list
-            if (command != NULL) {
-                int sent_count = write(serial_fd, command, strlen(command));
-
-                if (sent_count != (strlen(command))) {
-                    printf("Sorry couldn't send. Maybe device have issue\n");
-                }
-            }
-        }
-
-		if(DEBUG){
-			printf("INCOMING: %d OUTGOING: %d UART: %d\n",
-					count_incoming_list(),
-					count_outgoing_list(),
-					uart_status
-			);
-		}
-    }
-
+	}
     uart_close();
     printf("exit reason: %d\n", do_exit);
     exit(0);

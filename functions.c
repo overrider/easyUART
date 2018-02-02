@@ -1,24 +1,6 @@
-/*
- * =====================================================================================
- *
- *       Filename:  functions.c
- *
- *    Description:  
- *
- *        Version:  1.0
- *        Created:  01/31/2018 06:14:04 AM
- *       Revision:  none
- *       Compiler:  gcc
- *
- *         Author:  YOUR NAME (), 
- *   Organization:  
- *
- * =====================================================================================
- */
 #include "app.h"
 
-// check if the UART_DEVICE exists, meaning is plugged in
-// maybe some other fancy methods to check?
+// Check if the UART_DEVICE exists and can be accessed
 int is_device_ready() {
 	if (access(UART_DEVICE, F_OK) != -1) {
         return 1;
@@ -27,6 +9,7 @@ int is_device_ready() {
     }
 }
 
+// Pass a command and perform actions as needed
 int process_command(char *command){
 	if (strcmp(command, "#POK") == 0) {
 		last_pok = time(NULL);

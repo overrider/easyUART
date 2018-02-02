@@ -15,6 +15,10 @@ The same goes for outgoing. To send a command to the UART you call add_to_outgoi
 will add the command to an outgoing buffer. The main while loop will now, on each iteration, pick
 one outgong item and send it to the UART.
 
+The code will send #PNG to the UART device every 10 seconds, and expects the UART device to send back #POK as a reply.
+If there is no reply received, the app will notice there is a communication issue. Of course you may 
+take this part of the code out or adapt it to your personal needs.
+
 ## Configuration
 Adapt app.h to set your device and baudrate.
 If you don't have a UART device such as an Arduino to test with, you can emulate one using socat:
